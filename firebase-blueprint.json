@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "Service": {
+      "title": "Service",
+      "description": "Represents a service offered by the company.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the service" },
+        "description": { "type": "string", "description": "Description of the service" },
+        "icon": { "type": "string", "description": "Identifier for the icon" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["title", "description", "icon", "order"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "A customer testimonial.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string", "description": "Job title or role of the customer" },
+        "quote": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["name", "title", "quote", "image", "order"]
+    },
+    "FAQ": {
+      "title": "FAQ Item",
+      "description": "A frequently asked question and its answer.",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["question", "answer", "order"]
+    },
+    "SiteContent": {
+      "title": "Site Content",
+      "description": "General text content for different sections of the website.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" }
+      },
+      "required": ["text"]
+    }
+  },
+  "firestore": {
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Collection of services."
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": "Testimonial",
+      "description": "Collection of testimonials."
+    },
+    "/faqs/{faqId}": {
+      "schema": "FAQ",
+      "description": "Collection of FAQs."
+    },
+    "/content/{sectionId}": {
+      "schema": "SiteContent",
+      "description": "General site content (e.g., 'about')."
+    }
+  }
+}
