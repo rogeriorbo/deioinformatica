@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { auth, signInWithGoogle, logout, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, getDocFromServer, getDocsFromServer } from 'firebase/firestore';
 import { LogIn, LogOut, Plus, Trash2, Edit3, X, Save } from 'lucide-react';
+import { handleFirestoreError, OperationType } from './firestoreUtils';
 
 const AdminPanel = () => {
     const [user, setUser] = useState(null);
@@ -37,7 +38,12 @@ const AdminPanel = () => {
         try {
             if (tab === 'about') {
                 const docRef = doc(db, 'content', 'about');
-                const docSnap = await getDoc(docRef);
+                let docSnap;
+                try {
+                    docSnap = await getDocFromServer(docRef);
+                } catch (e) {
+                    docSnap = await getDoc(docRef);
+                }
                 if (docSnap.exists()) {
                     setAboutText(docSnap.data().text);
                 } else {
@@ -45,7 +51,12 @@ const AdminPanel = () => {
                 }
             } else if (tab === 'settings') {
                 const docRef = doc(db, 'content', 'settings');
-                const docSnap = await getDoc(docRef);
+                let docSnap;
+                try {
+                    docSnap = await getDocFromServer(docRef);
+                } catch (e) {
+                    docSnap = await getDoc(docRef);
+                }
                 if (docSnap.exists()) {
                     setSettingsData(docSnap.data());
                 } else {
@@ -60,7 +71,12 @@ const AdminPanel = () => {
                     });
                 }
             } else {
-                const querySnapshot = await getDocs(collection(db, tab));
+                let querySnapshot;
+                try {
+                    querySnapshot = await getDocsFromServer(collection(db, tab));
+                } catch (e) {
+                    querySnapshot = await getDocs(collection(db, tab));
+                }
                 const loadedItems = [];
                 querySnapshot.forEach((doc) => {
                     loadedItems.push({ id: doc.id, ...doc.data() });
@@ -69,6 +85,7 @@ const AdminPanel = () => {
                 setItems(loadedItems);
             }
         } catch (error) {
+            handleFirestoreError(error, OperationType.GET, tab, auth);
             console.error("Erro ao buscar dados:", error);
             alert("Erro ao carregar dados. Verifique o console.");
         }
@@ -83,6 +100,7 @@ const AdminPanel = () => {
             fetchData(activeTab);
             alert("Salvo com sucesso!");
         } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, activeTab, auth);
             console.error("Erro ao salvar:", error);
             alert("Erro ao salvar.");
         }
@@ -96,6 +114,7 @@ const AdminPanel = () => {
             await deleteDoc(doc(db, activeTab, id));
             fetchData(activeTab);
         } catch (error) {
+            handleFirestoreError(error, OperationType.DELETE, activeTab, auth);
             console.error("Erro ao excluir:", error);
             alert("Erro ao excluir.");
         }
@@ -118,6 +137,7 @@ const AdminPanel = () => {
             await setDoc(doc(db, 'content', 'about'), { text: aboutText });
             alert("Texto salvo com sucesso!");
         } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'content/about', auth);
             console.error("Erro ao salvar o texto sobre nós:", e);
             alert("Erro ao salvar.");
         }
@@ -130,6 +150,7 @@ const AdminPanel = () => {
             await setDoc(doc(db, 'content', 'settings'), settingsData);
             alert("Configurações salvas com sucesso!");
         } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'content/settings', auth);
             console.error("Erro ao salvar configurações:", e);
             alert("Erro ao salvar.");
         }

@@ -828,8 +828,24 @@ const TawkToWidget = () => {
     return null;
 };
 
-import { db } from './firebaseConfig.js';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db, auth } from './firebaseConfig.js';
+import { collection, getDocs, doc, getDoc, getDocFromServer, getDocsFromServer } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from './firestoreUtils.js';
+
+// Connection test as per guidelines
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firebase connection established successfully.");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Firebase connection failed: the client is offline. Please check your network and Firebase configuration.");
+    } else {
+        console.error("Firebase connection test failed:", error);
+    }
+  }
+}
+testConnection();
 
 export const DataContext = React.createContext({
     services: SERVICES_LIST,
@@ -872,25 +888,50 @@ const App = () => {
         const fetchContent = async () => {
             try {
                 // Fetch Services
-                const s = await getDocs(collection(db, 'services'));
+                let s;
+                try {
+                    s = await getDocsFromServer(collection(db, 'services'));
+                } catch (e) {
+                    s = await getDocs(collection(db, 'services'));
+                }
                 const loadedServices = s.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
                 
                 // Fetch FAQs
-                const f = await getDocs(collection(db, 'faqs'));
+                let f;
+                try {
+                    f = await getDocsFromServer(collection(db, 'faqs'));
+                } catch (e) {
+                    f = await getDocs(collection(db, 'faqs'));
+                }
                 const loadedFaqs = f.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
                 
                 // Fetch Testimonials
-                const t = await getDocs(collection(db, 'testimonials'));
+                let t;
+                try {
+                    t = await getDocsFromServer(collection(db, 'testimonials'));
+                } catch (e) {
+                    t = await getDocs(collection(db, 'testimonials'));
+                }
                 const loadedTestimonials = t.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
 
                 // Fetch About
                 let loadedAbout = siteData.about;
-                const aRef = await getDoc(doc(db, 'content', 'about'));
+                let aRef;
+                try {
+                    aRef = await getDocFromServer(doc(db, 'content', 'about'));
+                } catch (e) {
+                    aRef = await getDoc(doc(db, 'content', 'about'));
+                }
                 if (aRef.exists()) loadedAbout = aRef.data().text;
 
                 // Fetch Settings
                 let loadedSettings = siteData.settings;
-                const sRef = await getDoc(doc(db, 'content', 'settings'));
+                let sRef;
+                try {
+                    sRef = await getDocFromServer(doc(db, 'content', 'settings'));
+                } catch (e) {
+                    sRef = await getDoc(doc(db, 'content', 'settings'));
+                }
                 if (sRef.exists()) loadedSettings = sRef.data();
 
                 setSiteData({
@@ -901,6 +942,7 @@ const App = () => {
                     settings: loadedSettings
                 });
             } catch (err) {
+                handleFirestoreError(err, OperationType.GET, 'multiple_collections', auth);
                 console.error("Erro ao carregar do Firebase, usando dados estáticos.", err);
             }
         };
