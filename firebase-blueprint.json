@@ -2,66 +2,84 @@
   "entities": {
     "Service": {
       "title": "Service",
-      "description": "Represents a service offered by the company.",
+      "description": "A service offered by the company",
       "type": "object",
       "properties": {
-        "title": { "type": "string", "description": "Title of the service" },
-        "description": { "type": "string", "description": "Description of the service" },
-        "icon": { "type": "string", "description": "Identifier for the icon" },
-        "order": { "type": "number", "description": "Display order" }
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "order": { "type": "number" }
       },
       "required": ["title", "description", "icon", "order"]
     },
-    "Testimonial": {
-      "title": "Testimonial",
-      "description": "A customer testimonial.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "title": { "type": "string", "description": "Job title or role of the customer" },
-        "quote": { "type": "string" },
-        "image": { "type": "string", "format": "uri" },
-        "order": { "type": "number", "description": "Display order" }
-      },
-      "required": ["name", "title", "quote", "image", "order"]
-    },
     "FAQ": {
-      "title": "FAQ Item",
-      "description": "A frequently asked question and its answer.",
+      "title": "FAQ",
+      "description": "A frequently asked question and answer",
       "type": "object",
       "properties": {
         "question": { "type": "string" },
         "answer": { "type": "string" },
-        "order": { "type": "number", "description": "Display order" }
+        "order": { "type": "number" }
       },
       "required": ["question", "answer", "order"]
     },
-    "SiteContent": {
-      "title": "Site Content",
-      "description": "General text content for different sections of the website.",
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "A client testimonial",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "quote": { "type": "string" },
+        "image": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "title", "quote", "image", "order"]
+    },
+    "AboutContent": {
+      "title": "About Content",
+      "description": "The text for the about us section",
       "type": "object",
       "properties": {
         "text": { "type": "string" }
       },
       "required": ["text"]
+    },
+    "SettingsContent": {
+      "title": "Settings Content",
+      "description": "Contact information and social links",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "location": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "facebook": { "type": "string" },
+        "instagram": { "type": "string" }
+      },
+      "required": ["phone", "email", "location", "whatsapp", "facebook", "instagram"]
     }
   },
   "firestore": {
     "/services/{serviceId}": {
       "schema": "Service",
-      "description": "Collection of services."
-    },
-    "/testimonials/{testimonialId}": {
-      "schema": "Testimonial",
-      "description": "Collection of testimonials."
+      "description": "Collection of company services"
     },
     "/faqs/{faqId}": {
       "schema": "FAQ",
-      "description": "Collection of FAQs."
+      "description": "Collection of frequently asked questions"
     },
-    "/content/{sectionId}": {
-      "schema": "SiteContent",
-      "description": "General site content (e.g., 'about')."
+    "/testimonials/{testimonialId}": {
+      "schema": "Testimonial",
+      "description": "Collection of client testimonials"
+    },
+    "/content/about": {
+      "schema": "AboutContent",
+      "description": "Specific document for the about us text"
+    },
+    "/content/settings": {
+      "schema": "SettingsContent",
+      "description": "Specific document for site settings and contacts"
     }
   }
 }

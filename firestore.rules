@@ -9,7 +9,11 @@ service cloud.firestore {
     
     // Core Helpers
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && request.auth.token.email_verified == true && request.auth.token.email == 'deiorbo@gmail.com'; }
+    function isAdmin() { 
+      return isSignedIn() 
+        && request.auth.token.email_verified == true 
+        && request.auth.token.email == 'deiorbo@gmail.com'; 
+    }
     function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -18,20 +22,9 @@ service cloud.firestore {
     function isValidService(data) {
       return data.keys().hasAll(['title', 'description', 'icon', 'order'])
         && data.keys().size() == 4
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
-        && data.description is string && data.description.size() > 0 && data.description.size() <= 2000
-        && data.icon is string && data.icon.size() > 0 && data.icon.size() <= 100
-        && data.order is number;
-    }
-
-    // Validation Blueprint for Testimonial
-    function isValidTestimonial(data) {
-      return data.keys().hasAll(['name', 'title', 'quote', 'image', 'order'])
-        && data.keys().size() == 5
-        && data.name is string && data.name.size() > 0 && data.name.size() <= 150
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 150
-        && data.quote is string && data.quote.size() > 0 && data.quote.size() <= 1000
-        && data.image is string && data.image.size() > 0 && data.image.size() <= 1000
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.icon is string && data.icon.size() <= 100
         && data.order is number;
     }
 
@@ -39,16 +32,26 @@ service cloud.firestore {
     function isValidFAQ(data) {
       return data.keys().hasAll(['question', 'answer', 'order'])
         && data.keys().size() == 3
-        && data.question is string && data.question.size() > 0 && data.question.size() <= 500
-        && data.answer is string && data.answer.size() > 0 && data.answer.size() <= 5000
+        && data.question is string && data.question.size() <= 500
+        && data.answer is string && data.answer.size() <= 5000
         && data.order is number;
     }
 
-    // Validation Blueprint for Content
-    function isValidContent(data) {
-      return data.keys().hasAll(['text'])
-        && data.keys().size() == 1
-        && data.text is string && data.text.size() > 0 && data.text.size() <= 10000;
+    // Validation Blueprint for Testimonial
+    function isValidTestimonial(data) {
+      return data.keys().hasAll(['name', 'title', 'quote', 'image', 'order'])
+        && data.keys().size() == 5
+        && data.name is string && data.name.size() <= 200
+        && data.title is string && data.title.size() <= 200
+        && data.quote is string && data.quote.size() <= 2000
+        && data.image is string && data.image.size() <= 500
+        && data.order is number;
+    }
+
+    // Validation Blueprint for Site Content (About, Settings)
+    function isValidContent(sectionId, data) {
+      return (sectionId == 'about' && data.keys().hasAll(['text']) && data.keys().size() == 1 && data.text is string)
+        || (sectionId == 'settings' && data.keys().hasAll(['phone', 'email', 'location', 'whatsapp', 'facebook', 'instagram']) && data.keys().size() == 6 && data.email is string);
     }
 
     match /services/{serviceId} {
@@ -61,16 +64,6 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(serviceId);
     }
 
-    match /testimonials/{testimonialId} {
-      allow get: if isValidId(testimonialId);
-      allow list: if true;
-      allow create: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
-      allow update: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'title', 'quote', 'image', 'order'])
-      );
-      allow delete: if isAdmin() && isValidId(testimonialId);
-    }
-
     match /faqs/{faqId} {
       allow get: if isValidId(faqId);
       allow list: if true;
@@ -81,14 +74,19 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(faqId);
     }
 
-    match /content/{sectionId} {
-      allow get: if isValidId(sectionId);
+    match /testimonials/{testimonialId} {
+      allow get: if isValidId(testimonialId);
       allow list: if true;
-      allow create: if isAdmin() && isValidId(sectionId) && isValidContent(incoming());
-      allow update: if isAdmin() && isValidId(sectionId) && isValidContent(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['text'])
+      allow create: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow update: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'title', 'quote', 'image', 'order'])
       );
-      allow delete: if isAdmin() && isValidId(sectionId);
+      allow delete: if isAdmin() && isValidId(testimonialId);
+    }
+
+    match /content/{sectionId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidContent(sectionId, incoming());
     }
   }
 }

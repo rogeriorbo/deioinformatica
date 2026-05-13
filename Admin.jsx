@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { auth, signInWithGoogle, logout, db } from './firebaseConfig';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { apiClient } from './apiClient';
 import { LogIn, LogOut, Plus, Trash2, Edit3, X, Save } from 'lucide-react';
-import { handleFirestoreError, OperationType } from './firestoreUtils';
 
 const AdminPanel = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
     
     const [items, setItems] = useState([]);
     const [aboutText, setAboutText] = useState("");
@@ -18,61 +18,49 @@ const AdminPanel = () => {
     const [isSaving, setIsSaving] = useState(false);
     
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            if (!currentUser) setLoading(false);
-        });
-        return unsubscribe;
+        const checkAuth = async () => {
+            try {
+                const data = await apiClient.getMe();
+                setUser(data?.user || null);
+            } catch (error) {
+                setUser(null);
+            }
+            setLoading(false);
+        };
+        checkAuth();
     }, []);
 
     useEffect(() => {
-        if (user && user.email === 'deiorbo@gmail.com') {
+        if (user) {
             fetchData(activeTab);
-        } else if (user) {
-            setLoading(false);
         }
     }, [user, activeTab]);
 
     const fetchData = async (tab) => {
         setLoading(true);
         try {
-            if (tab === 'about') {
-                const docRef = doc(db, 'content', 'about');
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setAboutText(docSnap.data().text);
-                } else {
-                    setAboutText("");
-                }
-            } else if (tab === 'settings') {
-                const docRef = doc(db, 'content', 'settings');
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setSettingsData(docSnap.data());
-                } else {
-                    setSettingsData({
-                        phone: "5521979776578",
-                        email: "contato@deioinfo.com.br",
-                        location: "Rio de Janeiro, RJ",
-                        facebook: "https://facebook.com",
-                        instagram: "https://instagram.com",
-                        linkedin: "https://linkedin.com",
-                        whatsapp: "https://wa.me/5521979776578"
-                    });
-                }
+            if (tab === 'about' || tab === 'settings') {
+                const data = await apiClient.get(`/content/${tab}`);
+                if (tab === 'about') setAboutText(data.text);
+                else setSettingsData(data);
             } else {
-                const querySnapshot = await getDocs(collection(db, tab));
-                const loadedItems = [];
-                querySnapshot.forEach((doc) => {
-                    loadedItems.push({ id: doc.id, ...doc.data() });
-                });
-                loadedItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-                setItems(loadedItems);
+                const data = await apiClient.get(`/${tab}`);
+                data.sort((a, b) => (a.order || 0) - (b.order || 0));
+                setItems(data);
             }
         } catch (error) {
-            handleFirestoreError(error, OperationType.GET, tab, auth);
             console.error("Erro ao buscar dados:", error);
-            alert("Erro ao carregar dados. Verifique o console.");
+            if (tab === 'settings') {
+                setSettingsData({
+                    phone: "5521979776578",
+                    email: "contato@deioinfo.com.br",
+                    location: "Rio de Janeiro, RJ",
+                    facebook: "https://facebook.com",
+                    instagram: "https://instagram.com",
+                    linkedin: "https://linkedin.com",
+                    whatsapp: "https://wa.me/5521979776578"
+                });
+            }
         }
         setLoading(false);
     };
@@ -80,12 +68,10 @@ const AdminPanel = () => {
     const handleSaveItem = async (updatedItem) => {
         setIsSaving(true);
         try {
-            const itemRef = doc(db, activeTab, updatedItem.id);
-            await setDoc(itemRef, updatedItem);
+            await apiClient.post(`/${activeTab}`, updatedItem);
             fetchData(activeTab);
             alert("Salvo com sucesso!");
         } catch (error) {
-            handleFirestoreError(error, OperationType.WRITE, activeTab, auth);
             console.error("Erro ao salvar:", error);
             alert("Erro ao salvar.");
         }
@@ -96,10 +82,9 @@ const AdminPanel = () => {
         if (!window.confirm("Tem certeza que deseja excluir?")) return;
         setIsSaving(true);
         try {
-            await deleteDoc(doc(db, activeTab, id));
+            await apiClient.delete(`/${activeTab}/${id}`);
             fetchData(activeTab);
         } catch (error) {
-            handleFirestoreError(error, OperationType.DELETE, activeTab, auth);
             console.error("Erro ao excluir:", error);
             alert("Erro ao excluir.");
         }
@@ -119,10 +104,9 @@ const AdminPanel = () => {
     const saveAboutText = async () => {
         setIsSaving(true);
         try {
-            await setDoc(doc(db, 'content', 'about'), { text: aboutText });
+            await apiClient.post(`/content/about`, { text: aboutText });
             alert("Texto salvo com sucesso!");
         } catch (e) {
-            handleFirestoreError(e, OperationType.WRITE, 'content/about', auth);
             console.error("Erro ao salvar o texto sobre nós:", e);
             alert("Erro ao salvar.");
         }
@@ -132,14 +116,31 @@ const AdminPanel = () => {
     const saveSettingsData = async () => {
         setIsSaving(true);
         try {
-            await setDoc(doc(db, 'content', 'settings'), settingsData);
+            await apiClient.post(`/content/settings`, settingsData);
             alert("Configurações salvas com sucesso!");
         } catch (e) {
-            handleFirestoreError(e, OperationType.WRITE, 'content/settings', auth);
             console.error("Erro ao salvar configurações:", e);
             alert("Erro ao salvar.");
         }
         setIsSaving(false);
+    };
+
+    const handleEmailLogin = async (e) => {
+        e.preventDefault();
+        setIsLoggingIn(true);
+        try {
+            await apiClient.login(email, password);
+            const data = await apiClient.getMe();
+            setUser(data?.user || null);
+        } catch (error) {
+            alert(error.message);
+        }
+        setIsLoggingIn(false);
+    };
+
+    const handleLogout = () => {
+        apiClient.logout();
+        setUser(null);
     };
 
     if (loading && !user) return <div className="min-h-screen bg-dark-bg text-white flex items-center justify-center">Carregando...</div>;
@@ -147,30 +148,48 @@ const AdminPanel = () => {
     if (!user) {
         return (
             <div className="min-h-screen bg-dark-bg text-white flex flex-col items-center justify-center p-6">
-                <h1 className="text-3xl font-bold mb-8">Área Administrativa</h1>
-                <p className="text-gray-400 mb-8 max-w-md text-center">Faça login com seu perfil de administrador para gerenciar o conteúdo do site.</p>
-                <button 
-                    onClick={signInWithGoogle}
-                    className="flex items-center gap-3 bg-secondary hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                >
-                    <LogIn className="w-5 h-5" />
-                    Entrar com o Google
-                </button>
-                <div className="mt-8">
-                    <a href="/" className="text-sm text-gray-400 hover:text-white underline">Voltar para o site</a>
+                <div className="w-full max-w-md bg-light-bg p-8 rounded-2xl shadow-xl border border-gray-800">
+                    <h1 className="text-3xl font-bold mb-2 text-center">Área Administrativa</h1>
+                    <p className="text-gray-400 mb-8 text-center text-sm">Entre com suas credenciais para gerenciar o site.</p>
+                    
+                    <form onSubmit={handleEmailLogin} className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">E-mail</label>
+                            <input 
+                                type="email" 
+                                required
+                                className="w-full bg-white border border-gray-300 rounded-lg p-3 text-black focus:ring-1 focus:ring-secondary outline-none"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="seu-email@exemplo.com"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Senha</label>
+                            <input 
+                                type="password" 
+                                required
+                                className="w-full bg-white border border-gray-300 rounded-lg p-3 text-black focus:ring-1 focus:ring-secondary outline-none"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        <button 
+                            type="submit"
+                            disabled={isLoggingIn}
+                            className="w-full bg-secondary hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            {isLoggingIn ? "Entrando..." : "Entrar com E-mail"}
+                        </button>
+                    </form>
+                    
+                    <div className="text-center">
+                        <a href="/" className="text-xs text-gray-500 hover:text-white underline">Voltar para o site principal</a>
+                    </div>
                 </div>
             </div>
         );
-    }
-
-    if (user.email !== 'deiorbo@gmail.com') {
-         return (
-            <div className="min-h-screen bg-dark-bg text-white flex flex-col items-center justify-center p-6">
-                <h1 className="text-2xl font-bold mb-4 text-red-500">Acesso Negado</h1>
-                <p className="text-gray-400 mb-8 text-center">{user.email} não tem permissões administrativas.</p>
-                <button onClick={logout} className="bg-gray-800 px-6 py-2 rounded-lg hover:bg-gray-700">Sair</button>
-            </div>
-         );
     }
 
     return (
@@ -197,15 +216,15 @@ const AdminPanel = () => {
                 </nav>
                 <div className="mt-8 pt-6 border-t border-gray-800 hidden xl:block">
                     <div className="flex items-center gap-3 text-sm text-gray-400 mb-4 px-2">
-                        <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden">
-                            {user.photoURL && <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />}
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                            <span className="text-xs font-bold">ADM</span>
                         </div>
                         <div className="overflow-hidden">
-                            <p className="truncate font-medium text-gray-300">{user.displayName}</p>
+                            <p className="truncate font-medium text-gray-300">{user.email}</p>
                         </div>
                     </div>
                     <button 
-                        onClick={logout}
+                        onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
                     >
                         <LogOut className="w-4 h-4" />

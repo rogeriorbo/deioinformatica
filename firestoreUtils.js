@@ -26,5 +26,5 @@ export function handleFirestoreError(error, operationType, path, auth) {
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  return errInfo;
+  throw new Error(JSON.stringify(errInfo));
 }

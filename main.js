@@ -828,22 +828,7 @@ const TawkToWidget = () => {
     return null;
 };
 
-import { db, auth } from './firebaseConfig.js';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from './firestoreUtils.js';
-
-// Connection test as per guidelines
-async function testConnection() {
-  try {
-    // Just a regular getDoc to verify connection in an async way
-    await getDoc(doc(db, 'test', 'connection'));
-    console.log("Firebase initialized.");
-  } catch (error) {
-    // This is often expected in some preview environments, we don't want to alarm the user
-    console.warn("Firebase partially offline or connecting...");
-  }
-}
-testConnection();
+import { apiClient } from './apiClient.js';
 
 export const DataContext = React.createContext({
     services: SERVICES_LIST,
@@ -885,38 +870,21 @@ const App = () => {
     React.useEffect(() => {
         const fetchContent = async () => {
             try {
-                // Fetch Services
-                const s = await getDocs(collection(db, 'services'));
-                const loadedServices = s.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
-                
-                // Fetch FAQs
-                const f = await getDocs(collection(db, 'faqs'));
-                const loadedFaqs = f.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
-                
-                // Fetch Testimonials
-                const t = await getDocs(collection(db, 'testimonials'));
-                const loadedTestimonials = t.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
-
-                // Fetch About
-                let loadedAbout = siteData.about;
-                const aRef = await getDoc(doc(db, 'content', 'about'));
-                if (aRef.exists()) loadedAbout = aRef.data().text;
-
-                // Fetch Settings
-                let loadedSettings = siteData.settings;
-                const sRef = await getDoc(doc(db, 'content', 'settings'));
-                if (sRef.exists()) loadedSettings = sRef.data();
+                const s = await apiClient.get('/services');
+                const f = await apiClient.get('/faqs');
+                const t = await apiClient.get('/testimonials');
+                const a = await apiClient.get('/content/about');
+                const st = await apiClient.get('/content/settings');
 
                 setSiteData({
-                    services: loadedServices.length > 0 ? loadedServices : SERVICES_LIST,
-                    faqs: loadedFaqs.length > 0 ? loadedFaqs : FAQ_DATA,
-                    testimonials: loadedTestimonials.length > 0 ? loadedTestimonials : TESTIMONIALS_LIST,
-                    about: loadedAbout,
-                    settings: loadedSettings
+                    services: s.length > 0 ? s : SERVICES_LIST,
+                    faqs: f.length > 0 ? f : FAQ_DATA,
+                    testimonials: t.length > 0 ? t : TESTIMONIALS_LIST,
+                    about: a.text || siteData.about,
+                    settings: st || siteData.settings
                 });
             } catch (err) {
-                handleFirestoreError(err, OperationType.GET, 'multiple_collections', auth);
-                console.error("Erro ao carregar do Firebase, usando dados estáticos.", err);
+                console.error("Erro ao carregar do Servidor, usando dados estáticos.", err);
             }
         };
         fetchContent();
