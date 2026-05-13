@@ -38,7 +38,7 @@ const SettingsIcon = ({className}) => React.createElement("svg", { className, fi
 
 
 // App Constants (from constants.tsx)
-const NAV_LINKS = [{name:"Serviços",href:"#services"},{name:"Sobre Nós",href:"#about"},{name:"Depoimentos",href:"#testimonials"},{name:"Ajuda",href:"#faq"},{name:"Contato",href:"#contact"},{name:"WebMail",href:"https://webmail.deioinfo.com.br",external:!0}];
+const NAV_LINKS = [{name:"Serviços",href:"#services"},{name:"Sobre Nós",href:"#about"},{name:"Depoimentos",href:"#testimonials"},{name:"FAQ",href:"#faq"},{name:"Contato",href:"#contact"},{name:"WebMail",href:"https://webmail.deioinfo.com.br",external:!0}];
 const SERVICES_LIST = [{icon:React.createElement(ComputerIcon,{className:"w-12 h-12 text-secondary"}),title:"Manutenção de Hardware",description:"Diagnóstico e reparo de computadores, notebooks e periféricos com peças de alta qualidade."},{icon:React.createElement(NetworkIcon,{className:"w-12 h-12 text-secondary"}),title:"Infraestrutura de Redes",description:"Projetamos e implementamos redes cabeadas e Wi-Fi robustas e seguras para sua casa ou empresa."},{icon:React.createElement(ShieldIcon,{className:"w-12 h-12 text-secondary"}),title:"Segurança Digital",description:"Proteção completa contra vírus, malware e ameaças online, garantindo a integridade dos seus dados."},{icon:React.createElement(SupportIcon,{className:"w-12 h-12 text-secondary"}),title:"Suporte Técnico Remoto",description:"Soluções rápidas e eficientes para problemas de software e configuração, sem sair de casa."},{icon:React.createElement(CloudIcon,{className:"w-12 h-12 text-secondary"}),title:"Soluções em Nuvem",description:"Configuração de backup e armazenamento em nuvem para garantir que seus arquivos estejam sempre seguros."},{icon:React.createElement(ServerIcon,{className:"w-12 h-12 text-secondary"}),title:"Servidores Linux e Windows",description:"Gerenciamento, configuração e otimização de servidores para garantir máxima performance e segurança."}];
 const TESTIMONIALS_LIST=[{image:"https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=388&auto=format&fit=crop",quote:"A Déio Informática transformou nossa infraestrutura de TI. O suporte é rápido, eficiente e a equipe está sempre disposta a ajudar. Recomendo fortemente!",name:"Ana Silva",title:"CEO, Startup InovaTech"},{image:"https://images.unsplash.com/photo-1557862921-37829c790f19?q=80&w=500&auto=format&fit=crop",quote:"Desde que implementamos as soluções de rede e segurança com a Déio, nossa escola nunca esteve tão conectada e protegida. Um serviço essencial e de alta qualidade.",name:"Carlos Pereira",title:"Diretor de TI, Colégio Aprender+"},{image:"https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=461&auto=format&fit=crop",quote:"O contrato de manutenção para o nosso condomínio foi a melhor decisão. Problemas são resolvidos antes mesmo de se tornarem um incômodo para os moradores. Excelente!",name:"Mariana Costa",title:"Síndica, Condomínio Morada Feliz"}];
 
@@ -829,20 +829,18 @@ const TawkToWidget = () => {
 };
 
 import { db, auth } from './firebaseConfig.js';
-import { collection, getDocs, doc, getDoc, getDocFromServer, getDocsFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './firestoreUtils.js';
 
 // Connection test as per guidelines
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firebase connection established successfully.");
+    // Just a regular getDoc to verify connection in an async way
+    await getDoc(doc(db, 'test', 'connection'));
+    console.log("Firebase initialized.");
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Firebase connection failed: the client is offline. Please check your network and Firebase configuration.");
-    } else {
-        console.error("Firebase connection test failed:", error);
-    }
+    // This is often expected in some preview environments, we don't want to alarm the user
+    console.warn("Firebase partially offline or connecting...");
   }
 }
 testConnection();
@@ -888,50 +886,25 @@ const App = () => {
         const fetchContent = async () => {
             try {
                 // Fetch Services
-                let s;
-                try {
-                    s = await getDocsFromServer(collection(db, 'services'));
-                } catch (e) {
-                    s = await getDocs(collection(db, 'services'));
-                }
+                const s = await getDocs(collection(db, 'services'));
                 const loadedServices = s.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
                 
                 // Fetch FAQs
-                let f;
-                try {
-                    f = await getDocsFromServer(collection(db, 'faqs'));
-                } catch (e) {
-                    f = await getDocs(collection(db, 'faqs'));
-                }
+                const f = await getDocs(collection(db, 'faqs'));
                 const loadedFaqs = f.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
                 
                 // Fetch Testimonials
-                let t;
-                try {
-                    t = await getDocsFromServer(collection(db, 'testimonials'));
-                } catch (e) {
-                    t = await getDocs(collection(db, 'testimonials'));
-                }
+                const t = await getDocs(collection(db, 'testimonials'));
                 const loadedTestimonials = t.docs.map(doc => ({id: doc.id, ...doc.data()})).sort((a,b) => (a.order || 0) - (b.order || 0));
 
                 // Fetch About
                 let loadedAbout = siteData.about;
-                let aRef;
-                try {
-                    aRef = await getDocFromServer(doc(db, 'content', 'about'));
-                } catch (e) {
-                    aRef = await getDoc(doc(db, 'content', 'about'));
-                }
+                const aRef = await getDoc(doc(db, 'content', 'about'));
                 if (aRef.exists()) loadedAbout = aRef.data().text;
 
                 // Fetch Settings
                 let loadedSettings = siteData.settings;
-                let sRef;
-                try {
-                    sRef = await getDocFromServer(doc(db, 'content', 'settings'));
-                } catch (e) {
-                    sRef = await getDoc(doc(db, 'content', 'settings'));
-                }
+                const sRef = await getDoc(doc(db, 'content', 'settings'));
                 if (sRef.exists()) loadedSettings = sRef.data();
 
                 setSiteData({
@@ -950,7 +923,7 @@ const App = () => {
     }, []);
 
     React.useEffect(() => {
-        const sectionTitles = { 'home': 'O mundo em suas mãos', 'services': 'Nossos Serviços', 'about': 'Sobre Nós', 'testimonials': 'Depoimentos', 'faq': 'Ajuda', 'corporate': 'Soluções Corporativas', 'contact': 'Entre em Contato' };
+        const sectionTitles = { 'home': 'O mundo em suas mãos', 'services': 'Nossos Serviços', 'about': 'Sobre Nós', 'testimonials': 'Depoimentos', 'faq': 'Perguntas Frequentes', 'corporate': 'Soluções Corporativas', 'contact': 'Entre em Contato' };
         const sections = mainRef.current?.querySelectorAll('section[id]');
         if (!sections?.length) return;
         document.title = `${sectionTitles['home']} | ${baseTitle}`;

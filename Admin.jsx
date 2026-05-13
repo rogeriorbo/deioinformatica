@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, signInWithGoogle, logout, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, getDocFromServer, getDocsFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { LogIn, LogOut, Plus, Trash2, Edit3, X, Save } from 'lucide-react';
 import { handleFirestoreError, OperationType } from './firestoreUtils';
 
@@ -38,12 +38,7 @@ const AdminPanel = () => {
         try {
             if (tab === 'about') {
                 const docRef = doc(db, 'content', 'about');
-                let docSnap;
-                try {
-                    docSnap = await getDocFromServer(docRef);
-                } catch (e) {
-                    docSnap = await getDoc(docRef);
-                }
+                const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     setAboutText(docSnap.data().text);
                 } else {
@@ -51,12 +46,7 @@ const AdminPanel = () => {
                 }
             } else if (tab === 'settings') {
                 const docRef = doc(db, 'content', 'settings');
-                let docSnap;
-                try {
-                    docSnap = await getDocFromServer(docRef);
-                } catch (e) {
-                    docSnap = await getDoc(docRef);
-                }
+                const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     setSettingsData(docSnap.data());
                 } else {
@@ -71,12 +61,7 @@ const AdminPanel = () => {
                     });
                 }
             } else {
-                let querySnapshot;
-                try {
-                    querySnapshot = await getDocsFromServer(collection(db, tab));
-                } catch (e) {
-                    querySnapshot = await getDocs(collection(db, tab));
-                }
+                const querySnapshot = await getDocs(collection(db, tab));
                 const loadedItems = [];
                 querySnapshot.forEach((doc) => {
                     loadedItems.push({ id: doc.id, ...doc.data() });
@@ -196,7 +181,7 @@ const AdminPanel = () => {
                 <nav className="flex-1 space-y-2 flex flex-row xl:flex-col overflow-x-auto">
                     {[
                         { id: 'services', label: 'Serviços' },
-                        { id: 'faqs', label: 'Ajuda' },
+                        { id: 'faqs', label: 'FAQ' },
                         { id: 'testimonials', label: 'Depoimentos' },
                         { id: 'about', label: 'Sobre Nós' },
                         { id: 'settings', label: 'Contatos e Redes' }
@@ -235,7 +220,7 @@ const AdminPanel = () => {
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
                         <h1 className="text-3xl font-bold">
-                            Gerenciar {activeTab === 'services' ? 'Serviços' : activeTab === 'faqs' ? 'Ajuda' : activeTab === 'about' ? 'Sobre Nós' : activeTab === 'settings' ? 'Contatos e Redes' : 'Depoimentos'}
+                            Gerenciar {activeTab === 'services' ? 'Serviços' : activeTab === 'faqs' ? 'FAQ' : activeTab === 'about' ? 'Sobre Nós' : activeTab === 'settings' ? 'Contatos e Redes' : 'Depoimentos'}
                         </h1>
                         {(activeTab !== 'about' && activeTab !== 'settings') && (
                             <button 
