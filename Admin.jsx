@@ -196,7 +196,7 @@ const AdminPanel = () => {
                 <nav className="flex-1 space-y-2 flex flex-row xl:flex-col overflow-x-auto">
                     {[
                         { id: 'services', label: 'Serviços' },
-                        { id: 'faqs', label: 'Perguntas (FAQ)' },
+                        { id: 'faqs', label: 'Ajuda' },
                         { id: 'testimonials', label: 'Depoimentos' },
                         { id: 'about', label: 'Sobre Nós' },
                         { id: 'settings', label: 'Contatos e Redes' }
@@ -235,7 +235,7 @@ const AdminPanel = () => {
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
                         <h1 className="text-3xl font-bold">
-                            Gerenciar {activeTab === 'services' ? 'Serviços' : activeTab === 'faqs' ? 'FAQ' : activeTab === 'about' ? 'Sobre Nós' : activeTab === 'settings' ? 'Contatos e Redes' : 'Depoimentos'}
+                            Gerenciar {activeTab === 'services' ? 'Serviços' : activeTab === 'faqs' ? 'Ajuda' : activeTab === 'about' ? 'Sobre Nós' : activeTab === 'settings' ? 'Contatos e Redes' : 'Depoimentos'}
                         </h1>
                         {(activeTab !== 'about' && activeTab !== 'settings') && (
                             <button 
